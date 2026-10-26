@@ -4,14 +4,16 @@ import {
   GOALS, SCORE_NOTE, VALUE, ceil500, evaluate, floor500,
   priceSpan, priorityList, rank, type Fit, type Prefs, type TypeChoice,
 } from "./recommend";
+import { summarize } from "./reviewTrust";
+import ReviewTrustPanel from "./ReviewTrustPanel";
 import "./App.css";
 
 type View = "discover" | "saved" | "compare";
 type Sort = "match" | "low" | "high" | "rating";
 type Msg = { role: "assistant" | "user"; text: string };
 
-const PREFS_KEY = "Shopura-prefs-v2";
-const SAVED_KEY = "Shopura-saved";
+const PREFS_KEY = "clearcart-prefs-v2";
+const SAVED_KEY = "clearcart-saved";
 
 const formatPrice = (n: number) =>
   new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);
@@ -200,9 +202,9 @@ function App() {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <button className="brand" onClick={() => goTo("discover")} aria-label="Shopura home">
+        <button className="brand" onClick={() => goTo("discover")} aria-label="ClearCart home">
           <span className="brand-mark">C</span>
-          <span><strong>Shopura</strong><small>CHOOSE CLEARLY</small></span>
+          <span><strong>ClearCart</strong><small>CHOOSE CLEARLY</small></span>
         </button>
         <nav className="main-nav" aria-label="Main navigation">
           {(["discover", "saved", "compare"] as View[]).map((v) => (
@@ -233,11 +235,12 @@ function App() {
               </div>
             </section>
 
-            <section className="trust-strip" aria-label="How Shopura works">
+            <section className="trust-strip" aria-label="How ClearCart works">
               <div><span className="trust-icon">1</span><span><strong>Tell us what matters</strong><small>Type, budget, goal, priorities</small></span></div>
               <div><span className="trust-icon">2</span><span><strong>Get a ranked shortlist</strong><small>With reasons and trade-offs</small></span></div>
               <div><span className="trust-icon">3</span><span><strong>Compare and decide</strong><small>Side by side, same type</small></span></div>
             </section>
+
             <section className="catalog-section" id="catalog">
               <div className="section-heading">
                 <div>
@@ -373,7 +376,7 @@ function App() {
       </main>
 
       <footer className="app-footer">
-        <div><span className="brand-mark small">C</span><strong>Shopura</strong></div>
+        <div><span className="brand-mark small">C</span><strong>ClearCart</strong></div>
         <p>A shopping-decision prototype using illustrative demo data. Prices, specs and reviews are not verified; check before buying.</p>
         <span>Made for clearer choices.</span>
       </footer>
@@ -398,7 +401,7 @@ function App() {
       {assistantOpen && (
         <section className="assistant-panel" aria-label="Shopping assistant">
           <header>
-            <div><strong>Shopura Assistant</strong><small>Rule-based · demo catalogue only</small></div>
+            <div><strong>ClearCart Assistant</strong><small>Rule-based · demo catalogue only</small></div>
             <button onClick={() => setAssistantOpen(false)} aria-label="Close assistant">×</button>
           </header>
           <div className="assistant-messages" aria-live="polite">
@@ -426,6 +429,7 @@ function ProductCard({ product, badge, score, reason, saved, compared, onSave, o
   product: Product; badge?: string; score?: number; reason?: string; saved: boolean; compared: boolean;
   onSave: () => void; onCompare: () => void; onDetails: () => void;
 }) {
+  const t = summarize(product);
   return (
     <article className="product-card">
       <div className="product-image-wrap" onClick={onDetails}>
@@ -440,6 +444,7 @@ function ProductCard({ product, badge, score, reason, saved, compared, onSave, o
         <h3>{product.name}</h3>
         <p className="card-type">{product.type}</p>
         <p className="card-reason">{reason}</p>
+        <p className="trust-chip">Review evidence: {t.counts.trustworthy}/{t.total} consistent{t.counts.suspicious ? ` · ${t.counts.suspicious} flagged` : ""} (demo)</p>
         <div className="product-price">
           <strong>{formatPrice(product.price)}</strong>
           {score !== undefined && <span>{score}% match</span>}
@@ -489,6 +494,9 @@ function CompareTable({ items, prefs }: { items: Product[]; prefs: Prefs }) {
             </td>
           ))}</tr>
           <tr><th>Sample rating</th>{items.map((p) => <td key={p.id}>★ {p.rating.toFixed(1)} (demo)</td>)}</tr>
+          <tr><th>Review evidence</th>{items.map((p) => { const t = summarize(p); return (
+            <td key={p.id}>{t.counts.trustworthy} of {t.total} show consistent detail<br /><small>{t.counts.suspicious} flagged · {t.verified} verified (demo data)</small></td>
+          ); })}</tr>
           {keys.map((k) => (
             <tr key={k}><th>{k}</th>{items.map((p) => <td key={p.id}>{p.specs[k] ?? "Not specified"}</td>)}</tr>
           ))}
@@ -585,8 +593,6 @@ function DetailsModal({ product: p, fit, saved, compared, onSave, onCompare, onC
   onSave: () => void; onCompare: () => void; onClose: () => void;
 }) {
   useEscape(onClose);
-  const good = p.reviews.filter((r) => r.sentiment === "positive");
-  const bad = p.reviews.filter((r) => r.sentiment === "negative");
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <section className="details-modal" role="dialog" aria-modal="true" aria-labelledby="details-title">
@@ -635,16 +641,7 @@ function DetailsModal({ product: p, fit, saved, compared, onSave, onCompare, onC
           <div className="details-section"><h3>Trade-offs to consider</h3><ul className="cons-list">{p.cons.map((x) => <li key={x}>{x}</li>)}</ul></div>
         </div>
 
-        <div className="details-section">
-          <h3>Review themes</h3>
-          <p className="review-disclaimer">{p.reviewSource}</p>
-          {p.reviews.length ? (
-            <div className="two-col flush">
-              <div><strong>What reviewers like</strong><ul className="pros-list">{good.map((r) => <li key={r.text}>{r.text}</li>)}</ul></div>
-              <div><strong>What to watch</strong><ul className="cons-list">{bad.map((r) => <li key={r.text}>{r.text}</li>)}</ul></div>
-            </div>
-          ) : <p>No review examples for this product.</p>}
-        </div>
+        <ReviewTrustPanel product={p} />
 
         <p className="data-source-note">Source: {p.dataSource}. Verify specifications, prices and availability before purchasing.</p>
       </section>
