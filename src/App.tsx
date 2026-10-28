@@ -12,8 +12,8 @@ type View = "discover" | "saved" | "compare";
 type Sort = "match" | "low" | "high" | "rating";
 type Msg = { role: "assistant" | "user"; text: string };
 
-const PREFS_KEY = "clearcart-prefs-v2";
-const SAVED_KEY = "clearcart-saved";
+const PREFS_KEY = "Shopura-prefs-v2";
+const SAVED_KEY = "Shopura-saved";
 
 const formatPrice = (n: number) =>
   new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);
@@ -202,9 +202,9 @@ function App() {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <button className="brand" onClick={() => goTo("discover")} aria-label="ClearCart home">
+        <button className="brand" onClick={() => goTo("discover")} aria-label="Shopura home">
           <span className="brand-mark">C</span>
-          <span><strong>ClearCart</strong><small>CHOOSE CLEARLY</small></span>
+          <span><strong>Shopura</strong><small>CHOOSE CLEARLY</small></span>
         </button>
         <nav className="main-nav" aria-label="Main navigation">
           {(["discover", "saved", "compare"] as View[]).map((v) => (
@@ -235,7 +235,7 @@ function App() {
               </div>
             </section>
 
-            <section className="trust-strip" aria-label="How ClearCart works">
+            <section className="trust-strip" aria-label="How Shopura works">
               <div><span className="trust-icon">1</span><span><strong>Tell us what matters</strong><small>Type, budget, goal, priorities</small></span></div>
               <div><span className="trust-icon">2</span><span><strong>Get a ranked shortlist</strong><small>With reasons and trade-offs</small></span></div>
               <div><span className="trust-icon">3</span><span><strong>Compare and decide</strong><small>Side by side, same type</small></span></div>
@@ -376,7 +376,7 @@ function App() {
       </main>
 
       <footer className="app-footer">
-        <div><span className="brand-mark small">C</span><strong>ClearCart</strong></div>
+        <div><span className="brand-mark small">C</span><strong>Shopura</strong></div>
         <p>A shopping-decision prototype using illustrative demo data. Prices, specs and reviews are not verified; check before buying.</p>
         <span>Made for clearer choices.</span>
       </footer>
@@ -401,7 +401,7 @@ function App() {
       {assistantOpen && (
         <section className="assistant-panel" aria-label="Shopping assistant">
           <header>
-            <div><strong>ClearCart Assistant</strong><small>Rule-based · demo catalogue only</small></div>
+            <div><strong>Shopura Assistant</strong><small>Rule-based · demo catalogue only</small></div>
             <button onClick={() => setAssistantOpen(false)} aria-label="Close assistant">×</button>
           </header>
           <div className="assistant-messages" aria-live="polite">
